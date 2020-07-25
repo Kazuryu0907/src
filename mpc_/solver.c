@@ -1,11 +1,3 @@
-/* Produced by CVXGEN, 2020-07-15 04:08:11 -0400.  */
-/* CVXGEN is Copyright (C) 2006-2017 Jacob Mattingley, jem@cvxgen.com. */
-/* The code in this file is Copyright (C) 2006-2017 Jacob Mattingley. */
-/* CVXGEN, or solvers produced by CVXGEN, cannot be used for commercial */
-/* applications without prior written permission from Jacob Mattingley. */
-
-/* Filename: solver.c. */
-/* Description: Main solver file. */
 #include "solver.h"
 double eval_gap(void) {
   int i;

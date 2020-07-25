@@ -6,13 +6,20 @@
 #include "driver/MWodometry.h"
 #include "driver/WheelKinematics.h"
 #include "driver/MDD.h"
+
 #include "mpc_/MPC.h"
 
+#include "Eigen/Core"
+#include "Eigen/LU"
+
 #include <math.h>
+
+using namespace Eigen;
 
 #define FOR(i,n) for(int (i) = 0;(i)<(n);(i)++)
 #define DeToRa(i) (M_PI*(i)/0.00556)
 
+MPC mpc(0.01,100,100);
 Serial serial(USBTX, USBRX);
 
 #define USE_ONLY_ODO
@@ -81,40 +88,51 @@ QEI encoder3(Odometrys.APulse3,
                  QEI::X4_ENCODING);
 
 
-QEI decoiQEI(NC,NC,NC,0,&TimerForQEI,QEI::X4_ENCODING);
-QEI encos[4] = {encoder1,encoder2,encoder3,decoiQEI};
+QEI encos[3] = {encoder1,encoder2,encoder3};
 MDD mdd(encos,p,i,d,0.8);
-MWodometry odos[3];
-FOR(i,3)odos[i] = new MWodometry(&encos[i],Odometrys.encoderPPR,Wheelrad);
+
+//FOR(i,3)odos[i] = new MWodometry(&encos[i],Odometrys.encoderPPR,Wheelrad);
 
 #ifndef USE_ONLY_ODO
 MPU9250 IMU(I2CPin.IMUSDA, I2CPin.IMUSCL, 400000);
 #endif
 double dt = 0.01;
-MPC mpc(dt,100,100);
+double a = 5;
+double R = 30;
+
+double Position[3] = {0,0,0};
+double xr[3] = {0,0,0};
+
 
 double OmegaToRpm(double omega);
-double Position[3] = {0,0,0};
+void solveN(double Nx,double Ny,double Nth,double theta,double L,double ret[3]);
+double XtoN(double x);
+double OtoN(double o);
 
+MWodometry odos[3] = {
+    MWodometry(encos[0],Odometrys.encoderPPR,Wheelrad),
+    MWodometry(encos[1],Odometrys.encoderPPR,Wheelrad),
+    MWodometry(encos[2],Odometrys.encoderPPR,Wheelrad)
+  };
+  int count_i = 16;
 int main(){
     FOR(i,6)OutPwms[i].period_ms(1);
+    double firstxr[16][3];
+    FOR(i,16){
+      firstxr[i][0] = a * cos(DeToRa(i*0.1));
+      firstxr[i][1] = a * sin(DeToRa(i*0.1));
+      firstxr[i][2] = 0;
+    }
+    mpc.setxr(firstxr);
     #ifndef USE_ONLY_ODO
     IMU.setup();
     #endif
-    double xr[16][3];
-    double a = 100;
-    FOR(i,16){
-      xr[i][0] = a*(DeToRa(i)-sin(DeToRa(i)));
-      xr[i][1] = a*(1-cos(DeToRa(i)));
-      xr[i][2] = 0;
-    }
-    mpc.setxr(xr);
-    int i_count = 15+15;
-    double OutPwm[4];
+    double OutPwm[3];
     for(;;){
       #ifndef USE_ONLY_ODO
       IMU.update();
-      Position.[0] = IMU.getYaw();
+      Position[0] = IMU.getYaw();
+      Position[0] = Position[0] * M_PI / 180;
       #endif
       #ifdef  USE_ONLY_ODO
       double allenco = 0;
@@ -125,33 +143,64 @@ int main(){
       Position[0] = Position[0] + dt*allenco;
       #endif
 
-      Position[1] = M_PI/30*(encos[0].getRPM()*cos(Position[0]) + encos[1].getRPM()*cos(Position[0]+5/6*M_PI) + encos[2].getRPM()*cos(Position[0]+7/6*M_PI));
-      Position[2] = M_PI/30*(encos[0].getRPM()*sin(Position[0]) + encos[1].getRPM()*sin(Position[0]+5/6*M_PI) + encos[2].getRPM()*sin(Position[0]+7/6*M_PI));
+      Position[1] = Position[1] + dt*M_PI/30*(encos[0].getRPM()*cos(Position[0]) + encos[1].getRPM()*cos(Position[0]+5/6*M_PI) + encos[2].getRPM()*cos(Position[0]+7/6*M_PI));
+      Position[2] = Position[2] + dt*M_PI/30*(encos[0].getRPM()*sin(Position[0]) + encos[1].getRPM()*sin(Position[0]+5/6*M_PI) + encos[2].getRPM()*sin(Position[0]+7/6*M_PI));
 
-      double oncexr[3];
-      oncexr[0] = a*(DeToRa(i_count)-sin(DeToRa(i_count)));
-      oncexr[1] = a*(1-cos(DeToRa(i_count)));
-      oncexr[2] = 0;
-      mpc.solv(oncexr,Position);
-      double *solvedu;
-      solvedu = mpc.getu();
-      double TrRPM[4];
-      FOR(i,3)TrRPM[i] = OmegaToRpm(solvedu[i]);
-      mdd.update(TrRPM);
+      xr[0] = a * cos(DeToRa(count_i*0.1));
+      xr[1] = a * sin(DeToRa(count_i*0.1));
+      xr[2] = 0;
+      //FOR(i,3)TrRPM[i] = OmegaToRpm(solvedu[i]);
+      double Nrs[3];
+      //FOR(i,2)Nrs[i] = XtoN(xr[i]-Position[i]);
+      mpc.solv(xr,Position);
+      Nrs[2] = OtoN(xr[2]-Position[2]);
+      double outNs[3];
+      solveN(Nrs[0],Nrs[1],Nrs[2],Position[2],L,outNs);
+
+      mdd.update(Nrs);
       mdd.getRPMToPWM(OutPwm);
       FOR(i,3){
-        OutPwms[i*2] = Outpwm[i] > 0 ? Outpwm[i] : 0;
-        OutPwms[i*2+1] =  Outpwm[i] < 0 ? -Outpwm[i] : 0;
+        OutPwms[i*2] = OutPwm[i] > 0 ? OutPwm[i] : 0;
+        OutPwms[i*2+1] =  OutPwm[i] < 0 ? -OutPwm[i] : 0;
       }
+      count_i++;
     }
 
-    wait(dt);
+    //wait(dt);
 
 
     printf("\n");
-    return(1);
 }
 
 double OmegaToRpm(double omega){
   return(30*omega/M_PI);
+}
+
+double XtoN(double x){
+  double N = 30/M_PI/R/dt*x;
+  return(N);
+}
+
+double OtoN(double o){
+  return(30*o/M_PI/dt);
+}
+void solveN(double Nx,double Ny,double Nth,double theta,double L,double ret[3]){
+    Matrix3d m;
+    m << cos(DeToRa(theta)),cos(DeToRa(120+theta)),cos(DeToRa(240+theta)),
+         sin(DeToRa(theta)),sin(DeToRa(120+theta)),sin(DeToRa(240+theta)),
+         1/L,1/L,1/L;
+    //std::cout << m << std::endl;
+    double detA = m.determinant();
+    Vector3d v(Nx,Ny,Nth);
+    Matrix3d backm;
+    backm = m;
+    FOR(i,3){
+        FOR(k,3){
+            m(k,i) = v(k);
+        }
+        //std::cout << m << std::endl;
+        //printf("----------------\n");
+        ret[i] = m.determinant()/detA;
+        m = backm;
+    }
 }

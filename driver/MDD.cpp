@@ -7,7 +7,7 @@ void MDD::setPWMLimit(double l)
 }
 */
 void MDD::update(double *ReceiveRPM){
-  for(int i = 0;i<4;i++){
+  for(int i = 0;i<3;i++){
       RPMs[i] = abs(QEIs[i]->getRPM());
       PIDs[i]->update(*(ReceiveRPM+i),RPMs[i]);
   }
@@ -15,12 +15,12 @@ void MDD::update(double *ReceiveRPM){
 
 void MDD::getRPMToPWM(double *array)
 {
-    for(int i = 0;i<4;i++)array[i] = PIDs[i]->getTerm();
+    for(int i = 0;i<3;i++)array[i] = PIDs[i]->getTerm();
 }
 
 void MDD::getCurrentRPM(double *array)
 {
-    for(int i = 0;i<4;i++)array[i] = RPMs[i];
+    for(int i = 0;i<3;i++)array[i] = RPMs[i];
 }
 
 void MDD::getPIDParams(int i,double *array)

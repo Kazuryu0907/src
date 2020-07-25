@@ -1,29 +1,33 @@
 #include "MPC.h"
 
+
 #define FOR(i,n) for(int (i) = 0;(i)<(n);(i)++)
 
+MPC::MPC(double dt,double maxu,double L){
+      _dt = dt;
+      _MPCL = L;
+      _maxu = maxu;
+      set_defaults();
+      setup_indexing();
+      load_default_data(_maxu);
+      settings.verbose = 0;
+}
 
-void shiftArray(){
+
+
+void MPC::shiftArray(){
       FOR(i,15)FOR(k,3)params.xr[i][k] = params.xr[i+1][k];
-      /*
-      double *temp[16];
-      std::memmove(temp,&params.xr[1],60);
-      std::memmove(params.xr,temp,60);
-      double tempxr[3] = {0,0,0};
-      params.xr[15] = tempxr;
-      */
-      //FOR(i,16)printf("%f:%f:%f\n",params.xr[i][0],params.xr[i][1],params.xr[i][2]);
 }
 
 void MPC::solv(double *xr,double *cx){
     params.xr[15] = xr;
     FOR(i,3)params.xzero[i] = cx[i];
+    solve();
     //print();
     //printf("%f:%f:%f\n",params.xr[15][0],params.xr[15][1],params.xr[15][2]);
-    solve();
     FOR(i,3)outu[i] = vars.u[0][i];
     Eigen::Map<Eigen::Vector3d> uvec(&outu[0]);
-    x0 = x0 + dt*B*uvec;
+    x0 = x0 + _dt*B*uvec;
     FOR(i,3)params.xzero[i] = x0.data()[i];
     shiftArray();
 }
@@ -53,7 +57,7 @@ void MPC::load_default_data(double maxu){
   /* Make this a diagonal PSD matrix, even though it's not diagonal. */
   B << 1,-0.5,-0.5,
        0,sqrt(3)/2,-sqrt(3)/2,
-       1/L,1/L,1/L;
+       1/_MPCL,1/_MPCL,1/_MPCL;
 
   params.B = B.data();
 

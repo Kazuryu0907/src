@@ -8,6 +8,7 @@
 /* Description: Header file with relevant definitions. */
 #ifndef SOLVER_H
 #define SOLVER_H
+
 /* Uncomment the next line to remove all library dependencies. */
 /*#define ZERO_LIBRARY_MODE */
 #ifdef MATLAB_MEX_FILE
@@ -207,8 +208,7 @@ void fillrhs_start(void);
 long solve(void);
 
 /* Function definitions in testsolver.c: */
-int main(int argc, char **argv);
-void load_default_data(void);
+
 
 /* Function definitions in util.c: */
 void tic(void);
@@ -220,5 +220,15 @@ float ran1(long*idum, int reset);
 float randn_internal(long *idum, int reset);
 double randn(void);
 void reset_rand(void);
+
+/* Produced by CVXGEN, 2020-07-15 04:08:11 -0400.  */
+/* CVXGEN is Copyright (C) 2006-2017 Jacob Mattingley, jem@cvxgen.com. */
+/* The code in this file is Copyright (C) 2006-2017 Jacob Mattingley. */
+/* CVXGEN, or solvers produced by CVXGEN, cannot be used for commercial */
+/* applications without prior written permission from Jacob Mattingley. */
+
+/* Filename: solver.c. */
+/* Description: Main solver file. */
+
 
 #endif
