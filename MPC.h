@@ -1,6 +1,8 @@
 #include "C:\eigen\Eigen/Core"
 using namespace Eigen;
-#include "solver.h"
+extern "C"{
+    #include "solver.h"
+}
 
 class MPC
 {
@@ -15,9 +17,6 @@ public:
     Matrix3d B;
     
 private:
-    Params params;
-    Settings settings;
-    Vars vars;
     double _dt;
     double _MPCL;
     double _maxu;

@@ -7,6 +7,7 @@ double eval_gap(void) {
     gap += work.z[i]*work.s[i];
   return gap;
 }
+
 void set_defaults(void) {
   settings.resid_tol = 1e-6;
   settings.eps = 1e-4;
@@ -20,6 +21,7 @@ void set_defaults(void) {
   settings.better_start = 1;
   settings.kkt_reg = 1e-7;
 }
+
 void setup_pointers(void) {
   work.y = work.x + 147;
   work.s = work.x + 198;

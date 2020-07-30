@@ -190,22 +190,28 @@ void fillb(void);
 void pre_ops(void);
 
 /* Function definitions in solver.c: */
-double eval_gap(void);
-void set_defaults(void);
-void setup_pointers(void);
-void setup_indexed_params(void);
-void setup_indexed_optvars(void);
-void setup_indexing(void);
-void set_start(void);
-double eval_objv(void);
-void fillrhs_aff(void);
-void fillrhs_cc(void);
-void refine(double *target, double *var);
-double calc_ineq_resid_squared(void);
-double calc_eq_resid_squared(void);
-void better_start(void);
-void fillrhs_start(void);
-long solve(void);
+#ifdef ____cplusplus
+extern "C"{
+#endif
+  double eval_gap(void);
+  void set_defaults(void);
+  void setup_pointers(void);
+  void setup_indexed_params(void);
+  void setup_indexed_optvars(void);
+  void setup_indexing(void);
+  void set_start(void);
+  double eval_objv(void);
+  void fillrhs_aff(void);
+  void fillrhs_cc(void);
+  void refine(double *target, double *var);
+  double calc_ineq_resid_squared(void);
+  double calc_eq_resid_squared(void);
+  void better_start(void);
+  void fillrhs_start(void);
+  long solve(void);
+#ifdef ____cplusplus
+}
+#endif
 
 /* Function definitions in testsolver.c: */
 

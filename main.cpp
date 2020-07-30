@@ -7,7 +7,7 @@
 #include "driver/WheelKinematics.h"
 #include "driver/MDD.h"
 
-#include "mpc_/MPC.h"
+#include "MPC.h"
 
 #include "Eigen/Core"
 #include "Eigen/LU"
@@ -18,6 +18,11 @@ using namespace Eigen;
 
 #define FOR(i,n) for(int (i) = 0;(i)<(n);(i)++)
 #define DeToRa(i) (M_PI*(i)/0.00556)
+
+Params params;
+Settings settings;
+Vars vars;
+Workspace work;
 
 MPC mpc(0.01,100,100);
 Serial serial(USBTX, USBRX);
@@ -145,6 +150,7 @@ int main(){
 
       Position[1] = Position[1] + dt*M_PI/30*(encos[0].getRPM()*cos(Position[0]) + encos[1].getRPM()*cos(Position[0]+5/6*M_PI) + encos[2].getRPM()*cos(Position[0]+7/6*M_PI));
       Position[2] = Position[2] + dt*M_PI/30*(encos[0].getRPM()*sin(Position[0]) + encos[1].getRPM()*sin(Position[0]+5/6*M_PI) + encos[2].getRPM()*sin(Position[0]+7/6*M_PI));
+      
 
       xr[0] = a * cos(DeToRa(count_i*0.1));
       xr[1] = a * sin(DeToRa(count_i*0.1));
