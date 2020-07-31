@@ -24,7 +24,7 @@ Settings settings;
 Vars vars;
 Workspace work;
 
-MPC mpc(0.01,100,100);
+
 Serial serial(USBTX, USBRX);
 
 #define USE_ONLY_ODO
@@ -108,6 +108,7 @@ double R = 30;
 double Position[3] = {0,0,0};
 double xr[3] = {0,0,0};
 
+MPC mpc(dt,100,100);
 
 double OmegaToRpm(double omega);
 void solveN(double Nx,double Ny,double Nth,double theta,double L,double ret[3]);
@@ -119,50 +120,52 @@ MWodometry odos[3] = {
     MWodometry(encos[1],Odometrys.encoderPPR,Wheelrad),
     MWodometry(encos[2],Odometrys.encoderPPR,Wheelrad)
   };
-  int count_i = 16;
+  int count_i = 0;
 int main(){
     FOR(i,6)OutPwms[i].period_ms(1);
     double firstxr[16][3];
     FOR(i,16){
-      firstxr[i][0] = a * cos(DeToRa(i*0.1));
-      firstxr[i][1] = a * sin(DeToRa(i*0.1));
+      firstxr[i][0] = a * cos(DeToRa(count_i*0.1));
+      firstxr[i][1] = a * sin(DeToRa(count_i*0.1));
       firstxr[i][2] = 0;
+      count_i++;
     }
     mpc.setxr(firstxr);
     #ifndef USE_ONLY_ODO
     IMU.setup();
     #endif
     double OutPwm[3];
+    
     for(;;){
       #ifndef USE_ONLY_ODO
       IMU.update();
-      Position[0] = IMU.getYaw();
-      Position[0] = Position[0] * M_PI / 180;
+      Position[2] = IMU.getYaw();
+      Position[2] = Position[2] * M_PI / 180;
       #endif
+      
       #ifdef  USE_ONLY_ODO
       double allenco = 0;
       FOR(i,3){
-        allenco += encos[i].getRPM()/30*M_PI;
+        allenco += encos[i].getRPS()/30*M_PI;
         }
       allenco /= L;
-      Position[0] = Position[0] + dt*allenco;
+      Position[2] = Position[2] + dt*allenco;
       #endif
 
-      Position[1] = Position[1] + dt*M_PI/30*(encos[0].getRPM()*cos(Position[0]) + encos[1].getRPM()*cos(Position[0]+5/6*M_PI) + encos[2].getRPM()*cos(Position[0]+7/6*M_PI));
-      Position[2] = Position[2] + dt*M_PI/30*(encos[0].getRPM()*sin(Position[0]) + encos[1].getRPM()*sin(Position[0]+5/6*M_PI) + encos[2].getRPM()*sin(Position[0]+7/6*M_PI));
+      Position[0] = Position[0] + dt*M_PI/30*(odos[0].getDistance()*cos(Position[2]) + odos[1].getDistance()*cos(Position[2]+5/6*M_PI) + odos[2].getDistance()*cos(Position[2]+7/6*M_PI));
+      Position[1] = Position[1] + dt*M_PI/30*(odos[0].getDistance()*sin(Position[2]) + odos[1].getDistance()*sin(Position[2]+5/6*M_PI) + odos[2].getDistance()*sin(Position[2]+7/6*M_PI));
       
+      FOR(i,3)odos[i].setDistance(0);
 
       xr[0] = a * cos(DeToRa(count_i*0.1));
       xr[1] = a * sin(DeToRa(count_i*0.1));
       xr[2] = 0;
-      //FOR(i,3)TrRPM[i] = OmegaToRpm(solvedu[i]);
-      double Nrs[3];
-      //FOR(i,2)Nrs[i] = XtoN(xr[i]-Position[i]);
-      mpc.solv(xr,Position);
-      Nrs[2] = OtoN(xr[2]-Position[2]);
-      double outNs[3];
-      solveN(Nrs[0],Nrs[1],Nrs[2],Position[2],L,outNs);
 
+      mpc.updateAngle(Position[2]);
+      mpc.solv(xr,Position);
+      double *outu = mpc.getu();
+      double Nrs[3];
+      FOR(i,3)Nrs[i] = OmegaToRpm(outu[i]);
       mdd.update(Nrs);
       mdd.getRPMToPWM(OutPwm);
       FOR(i,3){
@@ -172,41 +175,9 @@ int main(){
       count_i++;
     }
 
-    //wait(dt);
-
-
-    printf("\n");
+    wait(dt);
 }
 
 double OmegaToRpm(double omega){
   return(30*omega/M_PI);
-}
-
-double XtoN(double x){
-  double N = 30/M_PI/R/dt*x;
-  return(N);
-}
-
-double OtoN(double o){
-  return(30*o/M_PI/dt);
-}
-void solveN(double Nx,double Ny,double Nth,double theta,double L,double ret[3]){
-    Matrix3d m;
-    m << cos(DeToRa(theta)),cos(DeToRa(120+theta)),cos(DeToRa(240+theta)),
-         sin(DeToRa(theta)),sin(DeToRa(120+theta)),sin(DeToRa(240+theta)),
-         1/L,1/L,1/L;
-    //std::cout << m << std::endl;
-    double detA = m.determinant();
-    Vector3d v(Nx,Ny,Nth);
-    Matrix3d backm;
-    backm = m;
-    FOR(i,3){
-        FOR(k,3){
-            m(k,i) = v(k);
-        }
-        //std::cout << m << std::endl;
-        //printf("----------------\n");
-        ret[i] = m.determinant()/detA;
-        m = backm;
-    }
 }
