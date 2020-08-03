@@ -28,11 +28,7 @@ Workspace work;
 Serial serial(USBTX, USBRX);
 
 #define USE_ONLY_ODO
-/*
-PIDController pidObX(0.1, 0.05, 0);
-PIDController pidObY(0.1, 0.05, 0);
-PIDController pidObYaw(0.01, 0.005, 0);
-*/
+
  double p = 0.001;
  double i = 0.001;
  double d = 0.001;
@@ -41,32 +37,34 @@ Timer TimerForQEI;
 double L = 100;
 
 double Wheelrad = 100;
+#ifndef USE_ONLY_ODO
 struct
 {
   PinName IMUSDA = PB_11;
   PinName IMUSCL = PB_10;
 } I2CPin;
+#endif
 
-PwmOut POA1 = NC; 
-PwmOut POB1 = NC; 
-PwmOut POA2 = NC; 
-PwmOut POB2 = NC; 
-PwmOut POA3 = NC; 
-PwmOut POB3 = NC;
+PwmOut POA1 = PC_8; 
+PwmOut POB1 = PC_9; 
+PwmOut POA2 = PB_8; 
+PwmOut POB2 = PB_9; 
+PwmOut POA3 = PB_10; 
+PwmOut POB3 = PB_11;
 
 PwmOut OutPwms[6] = {POA1,POB1,POA2,POB2,POA3,POB3};
 
 
 struct
 {
-  PinName APulse1 = PF_9;
-  PinName BPulse1 = PF_8;
+  PinName APulse1 = PD_7;
+  PinName BPulse1 = PD_6;
   PinName IndexPulse1 = NC;
-  PinName APulse2 = PA_4_ALT0;
-  PinName BPulse2 = PB_0_ALT0;
+  PinName APulse2 = PD_5;
+  PinName BPulse2 = PD_4;
   PinName IndexPulse2 = NC;
-  PinName APulse3 = NC;
-  PinName BPulse3 = NC;
+  PinName APulse3 = PG_2;
+  PinName BPulse3 = PG_3;
   PinName IndexPulse3 = NC;
   const int encoderPPR = 1024;
 } Odometrys;
@@ -96,7 +94,7 @@ QEI encoder3(Odometrys.APulse3,
 QEI encos[3] = {encoder1,encoder2,encoder3};
 MDD mdd(encos,p,i,d,0.8);
 
-//FOR(i,3)odos[i] = new MWodometry(&encos[i],Odometrys.encoderPPR,Wheelrad);
+
 
 #ifndef USE_ONLY_ODO
 MPU9250 IMU(I2CPin.IMUSDA, I2CPin.IMUSCL, 400000);

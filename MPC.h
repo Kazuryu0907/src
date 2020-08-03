@@ -1,4 +1,4 @@
-#include "C:\eigen\Eigen/Core"
+#include "./Eigen/Core"
 using namespace Eigen;
 extern "C" {
 #include "solver.h"
